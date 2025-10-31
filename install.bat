@@ -33,6 +33,7 @@ if %errorLevel% == 0 (
 )
 
 :: Copy the executable to the installation directory
+cd /D "%~dp0"
 set "SOURCE_EXE=.\monitor.exe"
 set "TARGET_EXE=%INSTALL_DIR%\monitor.exe"
 if exist "%SOURCE_EXE%" (
