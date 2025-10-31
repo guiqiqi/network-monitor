@@ -16,16 +16,15 @@ class Monitor(ABC):
 
     def __init__(self) -> None:
         self._history_timer = deque(maxlen=settings.SRV_TIMER_DEQUE_SIZE)
-        self.run = timer(self.run, self._history_timer)
 
     def __call__(self) -> float:
-        self.run()
+        self._history_timer.appendleft(self.run())
         if not self._history_timer:
             return 0.
         return sum(self._history_timer) / len(self._history_timer)
 
     @abstractmethod
-    def run(self) -> None: ...
+    def run(self) -> float: ...
 
     @abstractmethod
     def __str__(self) -> str: ...
@@ -43,15 +42,16 @@ class PingMonitor(Monitor):
             return f'Ping {self.name}({self.target})'
         return f'Ping {self.target}'
 
-    def run(self) -> None:
+    def run(self) -> float:
         response = ping(
             self.target, 
             count=settings.PING_PACKET_COUNT, 
             timeout=settings.PING_TIMEOUT
         )
-        if not int(response.stats_success_ratio):
+        if response.stats_success_ratio == 0.:
             logger.warning(f'ping {self.target} failed')
             raise RuntimeError(f'ping {self.target} failed')
+        return response.rtt_avg_ms
 
 
 class TCPMonitor(Monitor):
@@ -67,6 +67,7 @@ class TCPMonitor(Monitor):
             return f'TCP {self.name}({self.target}:{self.port})'
         return f'TCP {self.target}:{self.port}'
     
+    @timer
     def run(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(settings.TCP_TIMEOUT)

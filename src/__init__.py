@@ -4,7 +4,6 @@ import time
 import logging
 import logging.handlers
 import functools
-from collections import deque
 
 from . import settings
 
@@ -21,16 +20,14 @@ def _set_logger(logger: logging.Logger) -> None:
     logger.addHandler(chanlder)
 
 
-def timer(func: t.Callable, collector: deque[int] | None = None) -> t.Callable:
+def timer(func: t.Callable[[t.Any], None]) -> t.Callable:
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> t.Any:
         start = time.time()
-        result = func(*args, **kwargs)
+        func(*args, **kwargs)
         end = time.time()
         logger.debug(f"{func.__name__} finished at {end - start:.2f} seconds")
-        if collector is not None:
-            collector.append(int((end - start) * 1000))
-        return result
+        return round((end - start) * 1000, 2)
     return wrapper
 
 
